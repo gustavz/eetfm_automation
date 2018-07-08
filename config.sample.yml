@@ -1,0 +1,20 @@
+## eetfm sample configuration file
+# do not change this
+# instead create a copy "config.yml" and apply your chnages there
+
+# TODO: set project paths
+# INFO: to prevent exportation or evaluation, set respective first list element to False: [False,...]
+TF_ODAPI_DIR: '/home/gustav/workspace/tensorflow/tf_models/research/object_detection'
+BASE_MODELS_DIR: 'base_models'      # relative (from this repo) path to export models directory
+EXPORT_MODELS_DIR: 'export_models'  # relative (from this repo) path to base models directory
+EXPORT_MODELS_LIST: []              # list of base models, if empty all models in base models dir are exported
+EVAL_MODELS_LIST: []                # list of export models, if empty all models in base models dir are used
+
+# TODO: set First and Second Stage NMS Score and IoU Thresholds and max num Proposals
+# reasonable thresholds: [0.7,0.5,0.3,0.1,0.0]
+# resonable proposals: [300,200,100,50,10]
+FS_SCORES_LIST: [0.0]
+FS_IOUS_LIST: [0.5]
+SS_SCORES_LIST: [0.3]
+SS_IOUS_LIST: [0.5]
+PROPOSALS_LIST: [300,200,100,50,10]
