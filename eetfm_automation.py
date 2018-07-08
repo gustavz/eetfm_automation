@@ -70,14 +70,14 @@ def export_model(base_model_name,
             --input_type=image_tensor \
             --pipeline_config_path={base_model_path}/pipeline.config \
             --trained_checkpoint_prefix={base_model_path}/model.ckpt \
-            --output_directory={export_path} \
-            --config_override={config_override}'.format(**loacls())
+            --output_directory={export_model_path} \
+            --config_override={config_override}'.format(**locals())
 
-    print ("> Exporting model {export_model_name}".format(**loacls()))
+    print ("> Exporting model {export_model_name}".format(**locals()))
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     process.wait()
     print process.returncode
-    print("> Export of model {export_model_name} complete".format(**loacls()))
+    print("> Export of model {export_model_name} complete".format(**locals()))
 
 
 def evaluate_model(model_name,models_dir,tf_dir):
@@ -98,7 +98,7 @@ def evaluate_model(model_name,models_dir,tf_dir):
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     process.wait()
     print process.returncode
-    print("> Evaluation of model {model_name} complete".format(**loacls()))
+    print("> Evaluation of model {model_name} complete".format(**locals()))
 
 
 def main():
@@ -136,7 +136,8 @@ def main():
                     for fs_iou in FS_IOUS_LIST:
                         for ss_score in SS_SCORES_LIST:
                             for ss_iou in SS_IOUS_LIST:
-                                export model_name = base_model_name + "_{proposals}p_{fs_score}fs_{fs_iou}fiou_{ss_score}ss_{ss_iou}siou".format(**locals())
+                                suffix = "_{proposals}p_{fs_score}fs_{fs_iou}fiou_{ss_score}ss_{ss_iou}siou".format(**locals())
+                                export_model_name = base_model_name +  suffix
                                 config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals)
                                 export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
 
