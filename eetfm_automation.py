@@ -26,14 +26,14 @@ def get_models_list(models_dir):
     print("> Loaded following sequention of models: \n{models_list}".format(**locals()))
     return models_list
 
-def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals):
+def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,num_examples,metrics):
     """
     Takes: first_stage_nms_score_threshold, first_stage_nms_iou_threshold,
             second_stage_nms_score_threshold, second_stage_nms_iou_threshold,
             num max proposals
     Returns: config override string
     """
-    config_override = " \
+    config_override = ' \
             model {{ \
                 faster_rcnn {{ \
                     first_stage_nms_score_threshold: {fs_score} \
@@ -48,7 +48,12 @@ def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals):
                         }} \
                     }} \
                 }} \
-            }}".format(**locals())
+            }} \
+            eval_config {{ \
+              num_examples: {num_examples} \
+              metrics_set: {metrics} \
+              visualize_groundtruth_boxes: true \
+            }}'.format(**locals())
     return config_override
 
 
@@ -121,6 +126,8 @@ def main():
     SS_SCORES_LIST = cfg['SS_SCORES_LIST']
     SS_IOUS_LIST = cfg['SS_IOUS_LIST']
     PROPOSALS_LIST = cfg['PROPOSALS_LIST']
+    NUM_EXAMPLES = cfg['NUM_EXAMPLES']
+    METRICS = cfg['METRICS']
 
     # load all models from base models directory if no specific list is given
     if not EXPORT_MODELS_LIST:
@@ -138,7 +145,7 @@ def main():
                             for ss_iou in SS_IOUS_LIST:
                                 suffix = "_{proposals}p_{fs_score}fs_{fs_iou}fiou_{ss_score}ss_{ss_iou}siou".format(**locals())
                                 export_model_name = base_model_name +  suffix
-                                config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals)
+                                config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,NUM_EXAMPLES,METRICS)
                                 export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
 
     # load all models from export models directory if no specific list is given
