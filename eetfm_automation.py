@@ -17,6 +17,7 @@ def get_models_list(models_dir):
     Takes: Models Directory Path
     Returns: list of model names in models_path directory
     """
+    models_list=[]
     for root, dirs, files in os.walk(models_dir):
         if root.count(os.sep) - models_dir.count(os.sep) == 0:
             for idx,model in enumerate(dirs):
@@ -166,7 +167,7 @@ def main():
                                     config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,NUM_EXAMPLES,METRICS)
                                     export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
                                 else:
-                                    print("> Skipping. Model {export_model_name} already exported".format(**locals()))
+                                    print("> Skipping: Model {export_model_name} already exported".format(**locals()))
 
     # load all models from export models directory if no specific list is given
     if not EVAL_MODELS_LIST:
@@ -179,7 +180,7 @@ def main():
             model_path = EXPORT_MODELS_DIR+"/"+model_name
             # check if model was already evaluated
             if os.path.exists(model_path+"/eval_log.txt") and SKIP_EVALED:
-                print("> Skipping. Model {model_name} already evaluated".format(**locals()))
+                print("> Skipping: Model {model_name} already evaluated".format(**locals()))
             else:
                 evaluate_model(model_name,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
 
