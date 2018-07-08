@@ -7,6 +7,7 @@ Written by github/GustavZ
 import os
 import sys
 import yaml
+import datetime
 import subprocess
 import numpy as np
 import tensorflow as tf
@@ -82,7 +83,10 @@ def export_model(base_model_name,
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     process.wait()
     print process.returncode
-    print("> Export of model {export_model_name} complete".format(**locals()))
+    if process.returncode == 0:
+        print("> Export of model {export_model_name} complete".format(**locals()))
+    else:
+        print("> ERROR: Exportation of model {model_name} NOT complete".format(**locals()))
 
 
 def evaluate_model(model_name,models_dir,tf_dir):
@@ -103,7 +107,17 @@ def evaluate_model(model_name,models_dir,tf_dir):
     process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     process.wait()
     print process.returncode
-    print("> Evaluation of model {model_name} complete".format(**locals()))
+    if process.returncode == 0:
+        log_evaldate(model_path)
+        print("> Evaluation of model {model_name} complete".format(**locals()))
+    else:
+        print("> ERROR: Evaluation of model {model_name} NOT complete".format(**locals()))
+
+def log_evaldate(model_path):
+    eval_date = datetime.datetime.now()
+    file = open('{model_path}/eval_log.txt'.format(**locals()),mode='a')
+    file.write("\nModel evaluated at: {eval_date}".format(**locals()))
+    file.close()
 
 
 def main():
@@ -128,10 +142,13 @@ def main():
     PROPOSALS_LIST = cfg['PROPOSALS_LIST']
     NUM_EXAMPLES = cfg['NUM_EXAMPLES']
     METRICS = cfg['METRICS']
+    SKIP_EVALED = cfg['SKIP_EVALED']
 
     # load all models from base models directory if no specific list is given
     if not EXPORT_MODELS_LIST:
         EXPORT_MODELS_LIST = get_models_list(BASE_MODELS_DIR)
+
+    ALREADY_EXPORTED_MODELS_LIST = get_models_list(EXPORT_MODELS_DIR)
 
     # export models if not set to False
     if not EXPORT_MODELS_LIST[0] is False:
@@ -145,8 +162,11 @@ def main():
                             for ss_iou in SS_IOUS_LIST:
                                 suffix = "_{proposals}p_{fs_score}fs_{fs_iou}fiou_{ss_score}ss_{ss_iou}siou".format(**locals())
                                 export_model_name = base_model_name +  suffix
-                                config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,NUM_EXAMPLES,METRICS)
-                                export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
+                                if not export_model_name in ALREADY_EXPORTED_MODELS_LIST:
+                                    config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,NUM_EXAMPLES,METRICS)
+                                    export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
+                                else:
+                                    print("> Skipping. Model {export_model_name} already exported".format(**locals()))
 
     # load all models from export models directory if no specific list is given
     if not EVAL_MODELS_LIST:
@@ -156,7 +176,12 @@ def main():
     if not EVAL_MODELS_LIST[0] is False:
         print("> Start Evaluating models")
         for model_name in EVAL_MODELS_LIST:
-            evaluate_model(model_name,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
+            model_path = EXPORT_MODELS_DIR+"/"+model_name
+            # check if model was already evaluated
+            if os.path.exists(model_path+"/eval_log.txt") and SKIP_EVALED:
+                print("> Skipping. Model {model_name} already evaluated".format(**locals()))
+            else:
+                evaluate_model(model_name,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
 
     print("> eetfm_automation complete")
 

@@ -24,3 +24,4 @@ PROPOSALS_LIST: [300,200,100,50,10]
 #                        'pascal_voc_instance_segmentation_metrics','weighted_pascal_voc_instance_segmentation_metrics'
 NUM_EXAMPLES: 5000                  # num examples of evaluation dataset
 METRICS: "pascal_voc_detection_metrics"
+SKIP_EVALED: True                   # skip already evaluated models
