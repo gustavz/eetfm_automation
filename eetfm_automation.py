@@ -23,8 +23,9 @@ def get_models_list(models_dir):
             for idx,model in enumerate(dirs):
                 models_list=[]
                 models_list.append(dirs)
-                models_list = np.squeeze(models_list)
-                models_list.sort()
+    if len(models_list) == 1:
+        models_list = models_list.pop(0)
+        models_list.sort()
     print("> Loaded following sequention of models: \n{models_list}".format(**locals()))
     return models_list
 
@@ -35,27 +36,27 @@ def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,num_example
             num max proposals
     Returns: config override string
     """
-    config_override = ' \
-            model {{ \
-                faster_rcnn {{ \
-                    first_stage_nms_score_threshold: {fs_score} \
-                    first_stage_nms_iou_threshold: {fs_iou} \
-                    first_stage_max_proposals: {proposals} \
-                    second_stage_post_processing {{ \
-                        batch_non_max_suppression {{ \
-                            score_threshold: {ss_score} \
-                            iou_threshold: {ss_iou} \
-                            max_detections_per_class: {proposals} \
-                            max_total_detections: {proposals} \
-                        }} \
-                    }} \
-                }} \
-            }} \
-            eval_config {{ \
-              num_examples: {num_examples} \
-              metrics_set: {metrics} \
-              visualize_groundtruth_boxes: true \
-            }}'.format(**locals())
+    config_override = '"\
+        model {{\n\
+          faster_rcnn {{\n\
+            first_stage_nms_score_threshold: {fs_score}\n\
+            first_stage_nms_iou_threshold: {fs_iou}\n\
+            first_stage_max_proposals: {proposals}\n\
+            second_stage_post_processing {{\n\
+              batch_non_max_suppression {{\n\
+                score_threshold: {ss_score}\n\
+                iou_threshold: {ss_iou}\n\
+                max_detections_per_class: {proposals}\n\
+                max_total_detections: {proposals}\n\
+              }}\n\
+            }}\n\
+          }}\n\
+        }}\n\
+        eval_config {{\n\
+          num_examples: {num_examples}\n\
+          metrics_set: {metrics!r}\n\
+          visualize_groundtruth_boxes: true\n\
+        }}"'.format(**locals())
     return config_override
 
 
@@ -163,11 +164,13 @@ def main():
                             for ss_iou in SS_IOUS_LIST:
                                 suffix = "_{proposals}p_{fs_score}fs_{fs_iou}fiou_{ss_score}ss_{ss_iou}siou".format(**locals())
                                 export_model_name = base_model_name +  suffix
-                                if not export_model_name in ALREADY_EXPORTED_MODELS_LIST:
+                                if not (ALREADY_EXPORTED_MODELS_LIST and export_model_name in ALREADY_EXPORTED_MODELS_LIST):
                                     config_override = create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,NUM_EXAMPLES,METRICS)
                                     export_model(base_model_name,export_model_name,config_override,BASE_MODELS_DIR,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
                                 else:
                                     print("> Skipping: Model {export_model_name} already exported".format(**locals()))
+    else:
+        print("> Skipping: user request")
 
     # load all models from export models directory if no specific list is given
     if not EVAL_MODELS_LIST:
@@ -183,6 +186,8 @@ def main():
                 print("> Skipping: Model {model_name} already evaluated".format(**locals()))
             else:
                 evaluate_model(model_name,EXPORT_MODELS_DIR,TF_ODAPI_DIR)
+    else:
+        print("> Skipping: user request")
 
     print("> eetfm_automation complete")
 
