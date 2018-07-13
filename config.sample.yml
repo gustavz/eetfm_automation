@@ -9,6 +9,7 @@ BASE_MODELS_DIR: 'base_models'      # relative (from this repo) path to export m
 EXPORT_MODELS_DIR: 'export_models'  # relative (from this repo) path to base models directory
 EXPORT_MODELS_LIST: []              # list of base models, if empty all models in base models dir are exported
 EVAL_MODELS_LIST: []                # list of export models, if empty all models in base models dir are evaluated
+SKIP_EVALED: True                   # skip already evaluated models
 
 # TODO: set First and Second Stage NMS Score and IoU Thresholds and max num Proposals
 # reasonable thresholds: [0.7,0.5,0.3,0.1,0.0]
@@ -20,8 +21,19 @@ SS_IOUS_LIST: [0.5]
 PROPOSALS_LIST: [300,200,100,50,10]
 
 # TODO: set evaluation config
-# possible metrics sets: 'pascal_voc_detection_metrics', 'weighted_pascal_voc_detection_metrics'
-#                        'pascal_voc_instance_segmentation_metrics','weighted_pascal_voc_instance_segmentation_metrics'
+# possible metrics sets: pascal_voc_detection_metrics, weighted_pascal_voc_detection_metrics
+#                        pascal_voc_instance_segmentation_metrics,weighted_pascal_voc_instance_segmentation_metrics
 NUM_EXAMPLES: 5000                  # num examples of evaluation dataset
-METRICS: 'pascal_voc_detection_metrics'
-SKIP_EVALED: True                   # skip already evaluated models
+METRICS: pascal_voc_detection_metrics
+
+# TODO: Define Before and After Strings
+# to change all occurences in all model configs in a certain directory
+# usefull if there should be changes to the evaluation config
+CHANGES_DIR: 'export_models'
+CHANGE_STRING_BEFORE: "pascal_voc_detection_metrics"
+CHANGE_STRING_AFTER:  "pascal_voc_instance_segmentation_metrics"
+
+# TODO: set list of models to do tf benchmark tests on and folder to save results
+# set path of TensorFlow Source Building Directory
+BENCHMARK_MODELS_LIST: []
+TF_DIR: '/home/gustav/workspace/tensorflow/tensorflow'
