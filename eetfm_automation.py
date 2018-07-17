@@ -4,6 +4,7 @@ Based on TensorFlow Object Detection API
 
 Written by github/GustavZ
 """
+import re
 import os
 import sys
 import yaml
@@ -11,7 +12,8 @@ import datetime
 import subprocess
 import numpy as np
 import tensorflow as tf
-import re
+
+
 
 def get_models_list(models_dir):
     """
@@ -29,6 +31,7 @@ def get_models_list(models_dir):
         models_list.sort()
     print("> Loaded following sequention of models: \n{models_list}".format(**locals()))
     return models_list
+
 
 def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,num_examples,metrics):
     """
@@ -61,6 +64,31 @@ def create_config_override(fs_score,fs_iou,ss_score,ss_iou,proposals,num_example
     return config_override
 
 
+def subprocess_command(cmd,model_name,task,model_path=None):
+    """
+    starts command in a supprocess and does some extra stuff
+    """
+    print ("> Start {task} {model_name}".format(**locals()))
+    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    #process.wait()
+    if task in ['export','eval']:
+        process.wait()
+        print process.returncode
+        if process.returncode == 0:
+            if model_path is not None:
+                log_date(model_path,task)
+
+    elif task in ['summarize','benchmark']:
+        proc_stdout = process.communicate()[0].strip()
+        print proc_stdout
+        process.wait()
+
+    if process.returncode == 0:
+        print("> {task} of model {model_name} complete".format(**locals()))
+    else:
+        print("> ERROR: {task} of model {model_name} NOT complete".format(**locals()))
+
+
 def export_model(base_model_name,
                 export_model_name,
                 config_override,
@@ -72,7 +100,6 @@ def export_model(base_model_name,
             config override string
     Exports new Model with TensorFlow object detection API
     """
-
     base_model_path = base_models_dir + "/" + base_model_name
     export_model_path = export_models_dir + "/" + export_model_name
     cmd = 'python {tf_dir}/export_inference_graph.py \
@@ -81,15 +108,7 @@ def export_model(base_model_name,
             --trained_checkpoint_prefix={base_model_path}/model.ckpt \
             --output_directory={export_model_path} \
             --config_override={config_override}'.format(**locals())
-
-    print ("> Start exporting model {export_model_name}".format(**locals()))
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    print process.returncode
-    if process.returncode == 0:
-        print("> Export of model {export_model_name} complete".format(**locals()))
-    else:
-        print("> ERROR: Exportation of model {model_name} NOT complete".format(**locals()))
+    subprocess_command(cmd,export_model_name,'export')
 
 
 def evaluate_model(model_name,models_dir,tf_dir):
@@ -97,7 +116,6 @@ def evaluate_model(model_name,models_dir,tf_dir):
     Takes: model name, model directory path, tensorflow object detection api path
     Evaluates Model with TensorFlow object detection API
     """
-
     model_path = models_dir + "/" + model_name
     cmd = 'python {tf_dir}/eval.py \
             --logtostderr \
@@ -105,32 +123,28 @@ def evaluate_model(model_name,models_dir,tf_dir):
             --checkpoint_dir={model_path}/ \
             --eval_dir={model_path}/eval \
             --run_once=True'.format(**locals())
+    subprocess_command(cmd,model_name,'eval',model_path)
 
-    print ("> Start evaluating model {model_name}".format(**locals()))
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    print process.returncode
-    if process.returncode == 0:
-        log_evaldate(model_path)
-        print("> Evaluation of model {model_name} complete".format(**locals()))
-    else:
-        print("> ERROR: Evaluation of model {model_name} NOT complete".format(**locals()))
 
-def log_evaldate(model_path):
+def log_date(model_path,task):
+    """
+    log evaluation date to txt file
+    """
     eval_date = datetime.datetime.now()
-    file = open('{model_path}/eval_log.txt'.format(**locals()),mode='a')
-    file.write("\nModel evaluated at: {eval_date}".format(**locals()))
+    file = open('{model_path}/{task}_log.txt'.format(**locals()),mode='a')
+    file.write("\nModel {task} at: {eval_date}".format(**locals()))
     file.close()
+
 
 def benchmark_model(model_name,model_dir,tf_dir,shape):
     root_dir = os.getcwd()
-    in_graph = "{root_dir}/{model_dir}/{model_name}/frozen_inference_graph.pb".format(**locals())
+    in_graph = '{root_dir}/{model_dir}/{model_name}/frozen_inference_graph.pb'.format(**locals())
     inputs = 'image_tensor'
     input_type = 'uint8'
     outputs = 'num_detections,detection_boxes,detection_scores,detection_classes,detection_masks'
-    log_file = '{root_dir}/{model_dir}/benchmark_{model_name}.txt'.format(**locals())
+    log_file = '{root_dir}/{model_dir}/{model_name}/model_benchmark.txt'.format(**locals())
 
-    cmd = 'cd {tf_dir}\
+    cmd = 'cd {tf_dir};\
     bazel run tensorflow/tools/benchmark:benchmark_model -- \
      --graph={in_graph} \
      --input_layer={inputs} \
@@ -143,25 +157,25 @@ def benchmark_model(model_name,model_dir,tf_dir,shape):
      --show_summary=true \
      --show_flops=true \
      2>&1 | tee {log_file}'. format(**locals())
-    print ("> Benchmarking model {model_name}".format(**locals()))
-    process = subprocess.Popen('/bin/bash', stdout=subprocess.PIPE)
-    out, err = process.communicate(cmd)
-    print out
-    process.wait()
-    print process.returncode
-    if process.returncode == 0:
-        print("> Benchmark of model {model_name} complete".format(**locals()))
-    else:
-        print("> ERROR: Benchmark of model {model_name} NOT complete".format(**locals()))
-        os.remove(log_file)
+    subprocess_command(cmd,model_name,'benchmark')
+
+
+def summarize_model(model_name,model_dir,tf_dir):
+    root_dir = os.getcwd()
+    in_graph = '{root_dir}/{model_dir}/{model_name}/frozen_inference_graph.pb'.format(**locals())
+    log_file = '{root_dir}/{model_dir}/{model_name}/model_summary.txt'.format(**locals())
+    cmd ='cd {tf_dir};\
+    bazel-bin/tensorflow/tools/graph_transforms/summarize_graph \
+     --in_graph={in_graph} \
+     2>&1 | tee {log_file}'.format(**locals())
+    subprocess_command(cmd,model_name,'summarize')
 
 
 def get_model_shape(model_path):
     """
     get input dimensions of model
     """
-
-    f = open(model_path+"/pipeline.config")
+    f = open(model_path+'/pipeline.config')
     for i, line in enumerate(f):
         if i == 6:
             min = re.search(r'\d+', line).group()
@@ -171,6 +185,13 @@ def get_model_shape(model_path):
     f.close()
     shape = "1,{min},{max},3".format(**locals())
     return shape
+
+def get_already_list(models_list,file_name,models_dir):
+    already_models_list = []
+    for model_name in models_list:
+        if os.path.exists('{models_dir}/{model_name}/{file_name}'.format(**locals())):
+            already_models_list.append(model_name)
+    return already_models_list
 
 
 def main():
@@ -198,7 +219,6 @@ def main():
     SKIP_EVALED = cfg['SKIP_EVALED']
     TF_DIR = cfg['TF_DIR']
     BENCHMARK_MODELS_LIST = cfg['BENCHMARK_MODELS_LIST']
-
 
     """
     MODEL EXPORTATION
@@ -245,11 +265,7 @@ def main():
     if not EVAL_MODELS_LIST[0] is False:
 
         # count models already evaluated
-        already_evaled_models_list = []
-        for model_name in EVAL_MODELS_LIST:
-            model_path = EXPORT_MODELS_DIR+"/"+model_name
-            if os.path.exists(model_path+"/eval_log.txt"):
-                already_evaled_models_list.append(model_name)
+        already_evaled_models_list = get_already_list(EVAL_MODELS_LIST,'eval_log.txt',EXPORT_MODELS_DIR)
         if eval_all:
             num_models_to_eval = len(EVAL_MODELS_LIST) - len(already_evaled_models_list)
         else:
@@ -267,7 +283,7 @@ def main():
         print("> Skipping Evaluation: User Request")
 
     """
-    MODEL BENCHMARK TESTING
+    SUMMARIZE AND BENCHMARK MODEL
     """
     # load all models from export models directory if no specific list is given
     if not BENCHMARK_MODELS_LIST:
@@ -275,17 +291,13 @@ def main():
         BENCHMARK_MODELS_LIST = get_models_list(EXPORT_MODELS_DIR)
     if not BENCHMARK_MODELS_LIST[0] is False:
         # count models already evaluated
-        already_benchmarked_models_list = []
-        for model_name in BENCHMARK_MODELS_LIST:
-            model_path = EXPORT_MODELS_DIR+"/"+model_name
-            if os.path.exists("{model_path}/benchmark_{model_name}.txt".format(**locals())):
-                already_benchmarked_models_list.append(model_name)
+        already_benchmarked_models_list = get_already_list(BENCHMARK_MODELS_LIST,'model_benchmark.txt',EXPORT_MODELS_DIR)
         if benchmark_all:
             num_models_to_benchmark = len(BENCHMARK_MODELS_LIST) - len(already_benchmarked_models_list)
         else:
             num_models_to_benchmark = len(BENCHMARK_MODELS_LIST)
 
-        print("> Start Benchmarking {num_models_to_benchmark} models".format(**locals()))
+        print("> Start Summarizing and Benchmarking {num_models_to_benchmark} models".format(**locals()))
         for i,model_name in enumerate(BENCHMARK_MODELS_LIST):
             # check if model is already evaluated
             print("> {}/{}".format(i+1,num_models_to_benchmark))
@@ -294,10 +306,10 @@ def main():
             else:
                 model_path = EXPORT_MODELS_DIR+"/"+model_name
                 shape = get_model_shape(model_path)
+                summarize_model(model_name,EXPORT_MODELS_DIR,TF_DIR)
                 benchmark_model(model_name,EXPORT_MODELS_DIR,TF_DIR,shape)
     else:
         print("> Skipping Evaluation: User Request")
-
 
 
     print("> eetfm_automation complete")

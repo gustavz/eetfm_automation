@@ -16,7 +16,7 @@ SKIP_EVALED: True                   # skip already evaluated models
 # resonable proposals: [300,200,100,50,10]
 FS_SCORES_LIST: [0.0]
 FS_IOUS_LIST: [0.5]
-SS_SCORES_LIST: [0.3]
+SS_SCORES_LIST: [0.0]
 SS_IOUS_LIST: [0.5]
 PROPOSALS_LIST: [300,200,100,50,10]
 
