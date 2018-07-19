@@ -230,7 +230,7 @@ def main():
     if not EXPORT_MODELS_LIST[0] is False:
         # count models already exported
         already_exported_models_list = get_models_list(EXPORT_MODELS_DIR)
-        num_models_to_export = len(PROPOSALS_LIST)*len(FS_SCORES_LIST)*len(FS_IOUS_LIST)*len(SS_SCORES_LIST)*len(SS_IOUS_LIST)
+        num_models_to_export = len(PROPOSALS_LIST)*len(FS_SCORES_LIST)*len(FS_IOUS_LIST)*len(SS_SCORES_LIST)*len(SS_IOUS_LIST)*len(EXPORT_MODELS_LIST)
 
         print("> Start Exporting {num_models_to_export} models".format(**locals()))
         # crazy exportation loop is crazy
@@ -309,7 +309,7 @@ def main():
                 summarize_model(model_name,EXPORT_MODELS_DIR,TF_DIR)
                 benchmark_model(model_name,EXPORT_MODELS_DIR,TF_DIR,shape)
     else:
-        print("> Skipping Evaluation: User Request")
+        print("> Skipping Benchmarking: User Request")
 
 
     print("> eetfm_automation complete")
