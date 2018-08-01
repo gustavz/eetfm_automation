@@ -183,7 +183,7 @@ def get_model_shape(model_path):
             max = re.search(r'\d+', line).group()
             break
     f.close()
-    shape = "1,{min},{max},3".format(**locals())
+    shape = "1,{min},{min},3".format(**locals())
     return shape
 
 def get_already_list(models_list,file_name,models_dir):
@@ -258,15 +258,15 @@ def main():
     MODEL EVALUATION
     """
     # load all models from export models directory if no specific list is given
+    eval_all = False
     if not EVAL_MODELS_LIST:
         eval_all = True
         EVAL_MODELS_LIST = get_models_list(EXPORT_MODELS_DIR)
     # evaluate models if not set to False
     if not EVAL_MODELS_LIST[0] is False:
-
         # count models already evaluated
         already_evaled_models_list = get_already_list(EVAL_MODELS_LIST,'eval_log.txt',EXPORT_MODELS_DIR)
-        if eval_all:
+        if eval_all and SKIP_EVALED:
             num_models_to_eval = len(EVAL_MODELS_LIST) - len(already_evaled_models_list)
         else:
             num_models_to_eval = len(EVAL_MODELS_LIST)
@@ -286,6 +286,7 @@ def main():
     SUMMARIZE AND BENCHMARK MODEL
     """
     # load all models from export models directory if no specific list is given
+    benchmark_all = False
     if not BENCHMARK_MODELS_LIST:
         benchmark_all = True
         BENCHMARK_MODELS_LIST = get_models_list(EXPORT_MODELS_DIR)
